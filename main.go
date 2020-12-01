@@ -1,26 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"math/rand"
 	"time"
 
+	"github.com/hajimehoshi/ebiten/text"
+
 	. "github.com/TuM0xA-S/goasteroids/vobj"
 	"github.com/hajimehoshi/ebiten"
-)
-
-const (
-	ScreenWidth       = 1000
-	ScreenHeight      = 800
-	AsteroidSpawnTime = 2
-	AsteroidCountMax  = 5
-	AsteroidSpeedMin  = 20
-	AsteroidSpeedMax  = 50
-	AsteroidRadiusMin = 50
-	AsteroidRadiusMax = 120
-	AsteroidRadiusGap = 0.15
-	AsteroidVertexCount = 12
 )
 
 func init() {
@@ -32,15 +22,21 @@ type Game struct {
 	rocket             VectorObject
 	beginLast          time.Time
 	asteroids          map[*VectorObject]bool
+	bullets            map[*VectorObject]bool
+	bulletLifetime     map[*VectorObject]float64
 	asteroidSpawnTimer float64
+	cooldownTimer      float64
+	mode               int
+	score              float64
+	record             int
+	recordUpdated      bool
 }
-
 
 func generateCircle(deviation float64, cnt int) (circle []Vec2) {
 	dangle := 2 * math.Pi / float64(cnt)
 	v := Vec2{0, -1}
 	for i := 0; i < cnt; i++ {
-		r := 1 - deviation + rand.Float64() * 2 * deviation
+		r := 1 - deviation + rand.Float64()*2*deviation
 		circle = append(circle, v.Mult(r))
 		v.Rotate(dangle)
 	}
@@ -66,53 +62,33 @@ func (g *Game) generateAsteroid() {
 		v.Rotate(angle)
 	}
 	asteroid := &VectorObject{
-		Speed: speed,
+		Speed:    speed,
 		Geometry: circle,
-		Scale:    rand.Float64() * (AsteroidRadiusMax - AsteroidRadiusMin) + AsteroidRadiusMin,
+		Scale:    rand.Float64()*(AsteroidRadiusMax-AsteroidRadiusMin) + AsteroidRadiusMin,
 		Color:    ColorGray,
 		Position: pos,
 	}
 	g.asteroids[asteroid] = true
 }
 
-//Update ...
-func (g *Game) Update() error {
-	dt := time.Since(g.beginLast).Seconds()
-	g.asteroidSpawnTimer += dt
-	if g.asteroidSpawnTimer >= AsteroidSpawnTime {
-		if len(g.asteroids) < AsteroidCountMax {
-			g.generateAsteroid()
-		}
-		g.asteroidSpawnTimer = 0
-	}
-	g.beginLast = time.Now()
+func (g *Game) spawnBullet() {
+	bullet := BulletObj
+	bullet.Angle = g.rocket.Angle
+	bullet.Speed = MakeVector(bullet.Angle, BulletSpeed)
+	bullet.Position = g.rocket.Position
+	g.bullets[&bullet] = true
+	g.bulletLifetime[&bullet] = BulletLifeTime
+}
 
-	if ebiten.IsKeyPressed(ebiten.KeyA) {
-		g.rocket.Rotate(dt, DirLeft)
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyD) {
-		g.rocket.Rotate(dt, DirRight)
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		g.rocket.Accelerate(dt)
-	}
-
-	g.rocket.Color = ColorGreen
-	for k := range g.asteroids {
-		if g.rocket.Collides(k) {
-			g.rocket.Color = ColorRed
-			break
-		}
-	}
-
-	g.rocket.Move(dt)
-	for k := range g.asteroids {
-		k.Move(dt)
-	}
-
-	return nil
+func (g *Game) startPlay() {
+	g.asteroids = make(map[*VectorObject]bool)
+	g.bullets = make(map[*VectorObject]bool)
+	g.bulletLifetime = make(map[*VectorObject]float64)
+	g.cooldownTimer = CooldownTime
+	g.asteroidSpawnTimer = AsteroidSpawnTime / 2
+	g.rocket = RocketObj
+	g.score = 0
+	g.recordUpdated = false
 }
 
 //Draw ....
@@ -120,12 +96,45 @@ func (g *Game) Draw(dst *ebiten.Image) {
 	for k := range g.asteroids {
 		k.Draw(dst)
 	}
-	g.rocket.Draw(dst)
+	switch g.mode {
+	case ModePlay:
+		for k := range g.bullets {
+			k.Draw(dst)
+		}
+		g.rocket.Draw(dst)
+		scoreText := fmt.Sprint("SCORE: ", int(g.score))
+		text.Draw(dst, scoreText, FontSmall, getCentredPosForText(scoreText, FontSmall), ScoreInGameY, ColorYellow)
+	case ModeStart:
+		text.Draw(dst, TitleTextValue, FontBig, TitleTextX, TitleTextY, ColorGold)
+		text.Draw(dst, PressSpaceTextValue, FontSmall, PressSpaceTextX, PressSpaceTextY, ColorYellow)
+		text.Draw(dst, ControlsTextValue, FontSmall, ControlsTextX, ControlsTextY, ColorOrange)
+		recordText := fmt.Sprint("RECORD: ", g.record)
+		text.Draw(dst, recordText, FontMedium, getCentredPosForText(recordText, FontMedium), RecordTextY, ColorGreen)
+	case ModeGameOver:
+		text.Draw(dst, GameOverTextValue, FontMedium, GameOverTextX, GameOverTextY, ColorRed)
+		text.Draw(dst, PressSpaceTextValue, FontSmall, PressSpaceTextX, PressSpaceTextY, ColorYellow)
+		scoreText := fmt.Sprint("SCORE: ", int(g.score))
+		text.Draw(dst, scoreText, FontMedium, getCentredPosForText(scoreText, FontMedium), ScoreGameOverY, ColorYellow)
+
+		if g.recordUpdated {
+			text.Draw(dst, NewRecordTextValue, FontMedium, NewRecordTextX, NewRecordTextY, ColorGreen)
+		}
+	}
 }
 
 //Layout ...
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return ScreenWidth, ScreenHeight
+}
+
+func getGame() *Game {
+	return &Game{
+		asteroids:          make(map[*VectorObject]bool),
+		beginLast:          time.Now(),
+		mode:               ModeStart,
+		record:             loadRecord(),
+		asteroidSpawnTimer: AsteroidSpawnTime / 2,
+	}
 }
 
 func main() {
@@ -134,21 +143,10 @@ func main() {
 	MaxX = ScreenWidth
 	MaxY = ScreenHeight
 	MaxSpeed = 400
-	g := &Game{
-		rocket: VectorObject{
-			Position:          Vec2{ScreenWidth / 2, ScreenHeight / 2},
-			AccelerationValue: 80,
-			Geometry: []Vec2{
-				{0, -2}, {1, 2}, {-1, 2},
-			},
-			Scale:       20,
-			RotateSpeed: 1.2 * math.Pi,
-			Color:       ColorGreen,
-		},
-		asteroids: make(map[*VectorObject]bool),
-		beginLast: time.Now(),
-	}
+	g := getGame()
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
+	saveRecord(g.record)
+
 }

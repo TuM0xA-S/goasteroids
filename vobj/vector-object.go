@@ -159,6 +159,13 @@ func (v *VectorObject) GetTransformed() []Vec2 {
 	return vecs
 }
 
+func MakeVector(angle, lenght float64) Vec2 {
+	v := Vec2{0, -lenght}
+	v.Rotate(angle)
+
+	return v
+}
+
 func getAllSegs(points []Vec2) (segs [][2]Vec2) {
 	for _, delta := range []Vec2{{0, 0}, {-MaxX, 0}, {MaxX, 0}, {0, MaxY}, {0, -MaxY}} {
 		for i := 0; i < len(points); i++ {

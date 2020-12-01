@@ -12,4 +12,5 @@ var (
 	ColorGold        = color.RGBA{255, 216, 0, 255}
 	ColorTransparent = color.RGBA{0, 0, 0, 0}
 	ColorBlack       = color.RGBA{0, 0, 0, 255}
+	ColorYellow      = color.RGBA{255, 255, 0, 255}
 )
