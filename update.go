@@ -23,11 +23,15 @@ func (g *Game) Update() error {
 	for k := range g.asteroids {
 		k.Move(dt)
 	}
+	g.processEffects(dt)
 	switch g.mode {
 	case ModePlay:
 		g.score += dt
 		if g.cooldownTimer > 0 {
 			g.cooldownTimer -= dt
+		}
+		if g.traceTimer > 0 {
+			g.traceTimer -= dt
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyA) {
 			g.rocket.Rotate(dt, DirLeft)
@@ -39,10 +43,14 @@ func (g *Game) Update() error {
 
 		if ebiten.IsKeyPressed(ebiten.KeyW) {
 			g.rocket.Accelerate(dt)
+			if g.traceTimer <= 0 {
+				g.generateRocketTrace()
+				g.traceTimer = TraceCooldownTime
+			}
 		}
 
-		for k := range g.bulletLifetime {
-			g.bulletLifetime[k] -= dt
+		for k := range g.lifetime {
+			g.lifetime[k] -= dt
 		}
 
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
@@ -56,12 +64,13 @@ func (g *Game) Update() error {
 		toRemoveBullets := map[*VectorObject]bool{}
 		for asteroid := range g.asteroids {
 			if g.rocket.Collides(asteroid) {
-				g.mode = ModeGameOver
+				g.mode = ModeSmash
+				g.generateExplosion(g.rocket.Position)
 				return nil
 			}
 		}
 
-		for k, v := range g.bulletLifetime {
+		for k, v := range g.lifetime {
 			if v <= 0 {
 				toRemoveBullets[k] = true
 			}
@@ -73,6 +82,7 @@ func (g *Game) Update() error {
 					g.score += AsteroidDestroyPoints
 					toRemoveAsteroids[a] = true
 					toRemoveBullets[b] = true
+					g.generateExplosion(a.Position)
 					break
 				}
 			}
@@ -80,7 +90,7 @@ func (g *Game) Update() error {
 
 		for k := range toRemoveBullets {
 			delete(g.bullets, k)
-			delete(g.bulletLifetime, k)
+			delete(g.lifetime, k)
 		}
 
 		for k := range toRemoveAsteroids {
@@ -91,6 +101,7 @@ func (g *Game) Update() error {
 			k.Move(dt)
 		}
 		g.rocket.Move(dt)
+
 	case ModeStart:
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.mode = ModePlay
@@ -103,6 +114,12 @@ func (g *Game) Update() error {
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.mode = ModeStart
+		}
+
+	case ModeSmash:
+		g.smashTimer -= dt
+		if g.smashTimer <= 0 {
+			g.mode = ModeGameOver
 		}
 
 	}

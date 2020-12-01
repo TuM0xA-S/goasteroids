@@ -16,7 +16,6 @@ const (
 
 //Consts
 var (
-	MaxSpeed float64
 	MaxX     float64
 	MaxY     float64
 )
@@ -84,6 +83,7 @@ type VectorObject struct {
 	Color             color.Color
 	RotateSpeed       float64
 	Angle             float64
+	MaxSpeed          float64
 }
 
 //Rotate acceleration vector
@@ -109,8 +109,8 @@ func (v *VectorObject) Acceleration() (res Vec2) {
 //Accelerate object
 func (v *VectorObject) Accelerate(dt float64) {
 	v.Speed = v.Speed.Add(v.Acceleration().Mult(dt))
-	if v.Speed.Len() > MaxSpeed {
-		v.Speed.SetLen(MaxSpeed)
+	if v.Speed.Len() > v.MaxSpeed {
+		v.Speed.SetLen(v.MaxSpeed)
 	}
 }
 
@@ -172,7 +172,7 @@ func getAllSegs(points []Vec2) (segs [][2]Vec2) {
 			p0 := points[i]
 			p0.X += delta.X
 			p0.Y += delta.Y
-			p1 := points[(i + 1) % len(points)]
+			p1 := points[(i+1)%len(points)]
 			p1.X += delta.X
 			p1.Y += delta.Y
 
