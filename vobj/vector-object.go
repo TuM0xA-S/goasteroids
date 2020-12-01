@@ -159,13 +159,30 @@ func (v *VectorObject) GetTransformed() []Vec2 {
 	return vecs
 }
 
+func getAllSegs(points []Vec2) (segs [][2]Vec2) {
+	for _, delta := range []Vec2{{0, 0}, {-MaxX, 0}, {MaxX, 0}, {0, MaxY}, {0, -MaxY}} {
+		for i := 0; i < len(points); i++ {
+			p0 := points[i]
+			p0.X += delta.X
+			p0.Y += delta.Y
+			p1 := points[(i + 1) % len(points)]
+			p1.X += delta.X
+			p1.Y += delta.Y
+
+			segs = append(segs, [2]Vec2{p0, p1})
+		}
+	}
+
+	return
+}
+
 //Collides cheks circuit intersection
 func (v *VectorObject) Collides(other *VectorObject) bool {
-	a := v.GetTransformed()
-	b := other.GetTransformed()
-	for i := 0; i < len(a); i++ {
-		for j := 0; j < len(b); j++ {
-			if SectionIntersects(a[i], a[(i+1)%len(a)], b[j], b[(j+1)%len(b)]) {
+	a := getAllSegs(v.GetTransformed())
+	b := getAllSegs(other.GetTransformed())
+	for i := range a {
+		for j := range b {
+			if SectionIntersects(a[i][0], a[i][1], b[j][0], b[j][1]) {
 				return true
 			}
 		}
@@ -200,6 +217,6 @@ func SectionIntersects(v0, v1, u0, u1 Vec2) bool {
 	dy := a1*c2 - c1*a2
 	y := dy / d
 
-	return (between(v0.X, v1.X, x) || between(v0.Y, v1.Y, y)) &&
-		(between(u0.X, u1.X, x) || between(u0.Y, u1.Y, y))
+	return between(v0.X, v1.X, x) && between(v0.Y, v1.Y, y) &&
+		between(u0.X, u1.X, x) && between(u0.Y, u1.Y, y)
 }
