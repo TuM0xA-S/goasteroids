@@ -36,6 +36,9 @@ func (g *Game) Update() error {
 		delete(g.lifetime, k)
 		delete(g.bullets, k)
 		delete(g.effects, k)
+		if g.energyBlocks[k] {
+			g.generateExplosion(k.Position, EffectEnergyLost)
+		}
 		delete(g.energyBlocks, k)
 	}
 
@@ -58,8 +61,8 @@ func (g *Game) Update() error {
 				g.score += AsteroidDestroyPoints
 				toRemoveAsteroids[a] = true
 				toRemoveBullets[b] = true
-				g.generateExplosion(a.Position)
-				if rand.Intn(EnergyBlockSpawnPerAsteroids) == 0 {
+				g.generateExplosion(a.Position, EffectExplosion)
+				if rand.Float64() <= EnergyBlockSpawnRate {
 					g.generateEnergyBlock(a.Position)
 				}
 				break
@@ -82,7 +85,7 @@ func (g *Game) Update() error {
 		g.energy -= dt * EnergyConsumptionSpeed
 		if g.energy <= 0 {
 			g.mode = ModeSmash
-			g.generateExplosion(g.rocket.Position)
+			g.generateExplosion(g.rocket.Position, EffectEnergyLost)
 			return nil
 		}
 
@@ -118,7 +121,7 @@ func (g *Game) Update() error {
 		for asteroid := range g.asteroids {
 			if g.rocket.Collides(asteroid) {
 				g.mode = ModeSmash
-				g.generateExplosion(g.rocket.Position)
+				g.generateExplosion(g.rocket.Position, EffectExplosion)
 				return nil
 			}
 		}
@@ -127,6 +130,7 @@ func (g *Game) Update() error {
 		for block := range g.energyBlocks {
 			if g.rocket.Collides(block) {
 				g.energy += EnergyPerBlock
+				g.score += PointsPerEnergyBlock
 				g.generateEnergyBlockCathed(g.rocket.Position)
 				toRemoveBlocks[block] = true
 			}

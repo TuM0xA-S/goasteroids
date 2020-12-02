@@ -80,7 +80,7 @@ type VectorObject struct {
 	AccelerationValue float64
 	Geometry          []Vec2
 	Scale             float64
-	Color             color.Color
+	Color             color.RGBA
 	RotateSpeed       float64
 	Angle             float64
 	MaxSpeed          float64

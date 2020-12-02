@@ -19,12 +19,6 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-const (
-	EffectTrace = iota
-	EffectExplosion
-	EffectEnergyGained
-)
-
 //Game asteroids
 type Game struct {
 	rocket             VectorObject
@@ -80,64 +74,37 @@ func generateCircle(deviation float64, cnt int) (circle []Vec2) {
 func (g *Game) generateRocketTrace() {
 	v := MakeVector(g.rocket.Angle+math.Pi, TraceSpeed)
 	v.SetLen(TraceDeltaY)
-	t := &VectorObject{
-		Geometry: generateCircle(0, EffectsDetalization),
-		Speed:    MakeVector(g.rocket.Angle+math.Pi, TraceSpeed),
-		Position: g.rocket.Position.Add(v),
-		Color:    ColorYellow,
-		Scale:    1,
-	}
-	g.lifetime[t] = TraceLifeTime
-	g.effects[t] = EffectTrace
+	t := g.generateExplosion(g.rocket.Position.Add(v), EffectTrace)
+	t.Speed = MakeVector(g.rocket.Angle+math.Pi, TraceSpeed)
 }
 
 func (g *Game) generateEnergyBlockCathed(pos Vec2) {
-	t := &VectorObject{
-		Geometry: generateCircle(0, EffectsDetalization),
-		Position: pos,
-		Color:    color.RGBA{0, 0, 255, 255},
-		Scale:    1,
-	}
-	g.lifetime[t] = EnergyGainedLifeTime
-	g.effects[t] = EffectEnergyGained
-
+	g.generateExplosion(pos, EffectEnergyGained)
 }
 
-func (g *Game) generateExplosion(pos Vec2) {
+func (g *Game) generateExplosion(pos Vec2, _type int) *VectorObject {
 	t := &VectorObject{
 		Geometry: generateCircle(0, EffectsDetalization),
 		Position: pos,
-		Color:    color.RGBA{255, 123, 0, 255},
+		Color:    getExplosionData[_type].Color,
 		Scale:    1,
 	}
-	g.lifetime[t] = ExplosionLifeTime
-	g.effects[t] = EffectExplosion
+	g.lifetime[t] = getExplosionData[_type].LifeTime
+	g.effects[t] = _type
+	return t
 }
 
 func (g *Game) processEffects(dt float64) {
 	for k, v := range g.effects {
 		k.Move(dt)
-		var gs float64
-		var ds float64
-		if v == EffectTrace {
-			gs = TraceGrowthSpeed
-			ds = TraceDisappearanceSpeed
-		} else if v == EffectExplosion {
-			gs = ExplosionGrowthSpeed
-			ds = ExplosionDisappearanceSpeed
-		} else if v == EffectEnergyGained {
-			gs = EnergyGainedGrowthSpeed
-			ds = EnergyGainedDisappearanceSpeed
-		}
+		gs, ds := getExplosionData[v].GrowthSpeed, getExplosionData[v].DisappearanceSpeed
 		k.Scale += dt * gs
-		clr := k.Color.(color.RGBA)
-		untransp := float64(clr.A)
+		untransp := float64(k.Color.A)
 		untransp -= dt * ds
 		if untransp < 0 {
 			untransp = 0
 		}
-		clr.A = uint8(untransp)
-		k.Color = clr
+		k.Color.A = uint8(untransp)
 	}
 }
 
@@ -203,8 +170,10 @@ func (g *Game) startPlay() {
 	g.effects = make(map[*VectorObject]int)
 	g.energyBlocks = make(map[*VectorObject]bool)
 
-	g.cooldownTimer = CooldownTime
+	g.cooldownTimer = CooldownTime / 2
 	g.asteroidSpawnTimer = AsteroidSpawnTime / 2
+	g.traceTimer = TraceCooldownTime / 2
+	
 	g.rocket = RocketObj
 	g.score = 0
 	g.recordUpdated = false
@@ -242,8 +211,17 @@ func (g *Game) Draw(dst *ebiten.Image) {
 		}
 		scoreText := fmt.Sprint("SCORE: ", int(g.score))
 		text.Draw(dst, scoreText, FontSmall, getCentredPosForText(scoreText, FontSmall), ScoreInGameY, ColorYellow)
+		color := color.RGBA{}
+		switch {
+		case g.energy >= 80:
+			color = ColorGreen
+		case g.energy >= 30:
+			color = ColorYellow
+		default:
+			color = ColorRed
+		}
 		energyText := fmt.Sprint("ENERGY: ", int(g.energy))
-		text.Draw(dst, energyText, FontSmall, getCentredPosForText(energyText, FontSmall), EnergyTextY, ColorYellow)
+		text.Draw(dst, energyText, FontSmall, getCentredPosForText(energyText, FontSmall), EnergyTextY, color)
 	case ModeStart:
 		text.Draw(dst, TitleTextValue, FontBig, TitleTextX, TitleTextY, ColorGold)
 		text.Draw(dst, PressSpaceTextValue, FontSmall, PressSpaceTextX, PressSpaceTextY, ColorYellow)
