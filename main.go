@@ -179,21 +179,21 @@ func (g *Game) Draw(dst *ebiten.Image) {
 	for k := range g.asteroids {
 		asteroids = append(asteroids, k)
 	}
-
 	sort.Slice(asteroids, func(i, j int) bool {
 		return g.idFor[asteroids[i]] < g.idFor[asteroids[j]]
 	})
 	for _, a := range asteroids {
 		a.Draw(dst)
 	}
+	for k := range g.bullets {
+		k.Draw(dst)
+	}
+	for k := range g.effects {
+		k.Draw(dst)
+	}
+
 	switch g.mode {
 	case ModePlay:
-		for k := range g.bullets {
-			k.Draw(dst)
-		}
-		for k := range g.effects {
-			k.Draw(dst)
-		}
 		g.rocket.Draw(dst)
 		scoreText := fmt.Sprint("SCORE: ", int(g.score))
 		text.Draw(dst, scoreText, FontSmall, getCentredPosForText(scoreText, FontSmall), ScoreInGameY, ColorYellow)
@@ -204,21 +204,17 @@ func (g *Game) Draw(dst *ebiten.Image) {
 		recordText := fmt.Sprint("RECORD: ", g.record)
 		text.Draw(dst, recordText, FontMedium, getCentredPosForText(recordText, FontMedium), RecordTextY, ColorGreen)
 	case ModeGameOver:
-		for k := range g.effects {
-			k.Draw(dst)
-		}
 		text.Draw(dst, GameOverTextValue, FontMedium, GameOverTextX, GameOverTextY, ColorRed)
 		text.Draw(dst, PressSpaceTextValue, FontSmall, PressSpaceTextX, PressSpaceTextY, ColorYellow)
 		scoreText := fmt.Sprint("SCORE: ", int(g.score))
 		text.Draw(dst, scoreText, FontMedium, getCentredPosForText(scoreText, FontMedium), ScoreGameOverY, ColorYellow)
-
 		if g.recordUpdated {
 			text.Draw(dst, NewRecordTextValue, FontMedium, NewRecordTextX, NewRecordTextY, ColorGreen)
 		}
 	case ModeSmash:
-		for k := range g.effects {
-			k.Draw(dst)
-		}
+		scoreText := fmt.Sprint("SCORE: ", int(g.score))
+		text.Draw(dst, scoreText, FontSmall, getCentredPosForText(scoreText, FontSmall), ScoreInGameY, ColorYellow)
+
 	}
 }
 
@@ -236,12 +232,13 @@ func getGame() *Game {
 		asteroidSpawnTimer: AsteroidSpawnTime / 2,
 		effects:            map[*VectorObject]int{},
 		idFor:              map[*VectorObject]int{},
+		bullets:            map[*VectorObject]bool{},
 	}
 }
 
 func main() {
 	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
-	ebiten.SetWindowTitle("Asteroids")
+	ebiten.SetWindowTitle("Asteroids beta v0.8")
 	MaxX = ScreenWidth
 	MaxY = ScreenHeight
 	g := getGame()

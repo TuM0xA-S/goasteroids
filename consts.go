@@ -45,19 +45,19 @@ const (
 	ScoreGameOverY              = GameOverTextY + 80
 	NewRecordTextValue          = "NEW RECORD"
 	NewRecordTextY              = ScoreGameOverY + 40
-	TraceLifeTime               = 0.3
+	TraceLifeTime               = 0.4
 	TraceCooldownTime           = 0.08
 	TraceDisappearanceSpeed     = 500
 	TraceGrowthSpeed            = 100
 	ExplosionDisappearanceSpeed = 300
-	ExplosionGrowthSpeed        = 200
-	ExplosionLifeTime           = 0.5
+	ExplosionGrowthSpeed        = 225
+	ExplosionLifeTime           = 0.7
 	EffectsDetalization         = 20
 	MaxSpeed                    = 400
 	TraceSpeed                  = MaxSpeed
 	TraceDeltaY                 = 40
 	SafeRange                   = 300
-	SmashTime                   = 1
+	SmashTime                   = 1.2
 )
 
 var RocketObj = VectorObject{

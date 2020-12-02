@@ -20,10 +20,54 @@ func (g *Game) Update() error {
 		}
 		g.asteroidSpawnTimer = 0
 	}
+
+	for k := range g.lifetime {
+		g.lifetime[k] -= dt
+	}
+
+	toRemoveByLifetime := map[*VectorObject]bool{}
+	for k, v := range g.lifetime {
+		if v <= 0 {
+			toRemoveByLifetime[k] = true
+		}
+	}
+	for k := range toRemoveByLifetime {
+		delete(g.lifetime, k)
+		delete(g.bullets, k)
+		delete(g.effects, k)
+	}
+
 	for k := range g.asteroids {
 		k.Move(dt)
 	}
 	g.processEffects(dt)
+	for k := range g.bullets {
+		k.Move(dt)
+	}
+
+	toRemoveAsteroids := map[*VectorObject]bool{}
+	toRemoveBullets := map[*VectorObject]bool{}
+	for b := range g.bullets {
+		for a := range g.asteroids {
+			if b.Collides(a) {
+				g.score += AsteroidDestroyPoints
+				toRemoveAsteroids[a] = true
+				toRemoveBullets[b] = true
+				g.generateExplosion(a.Position)
+				break
+			}
+		}
+	}
+
+	for k := range toRemoveBullets {
+		delete(g.bullets, k)
+		delete(g.lifetime, k)
+	}
+
+	for k := range toRemoveAsteroids {
+		delete(g.asteroids, k)
+	}
+
 	switch g.mode {
 	case ModePlay:
 		g.score += dt
@@ -49,10 +93,6 @@ func (g *Game) Update() error {
 			}
 		}
 
-		for k := range g.lifetime {
-			g.lifetime[k] -= dt
-		}
-
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			if g.cooldownTimer <= 0 {
 				g.spawnBullet()
@@ -60,45 +100,12 @@ func (g *Game) Update() error {
 			}
 		}
 
-		toRemoveAsteroids := map[*VectorObject]bool{}
-		toRemoveBullets := map[*VectorObject]bool{}
 		for asteroid := range g.asteroids {
 			if g.rocket.Collides(asteroid) {
 				g.mode = ModeSmash
 				g.generateExplosion(g.rocket.Position)
 				return nil
 			}
-		}
-
-		for k, v := range g.lifetime {
-			if v <= 0 {
-				toRemoveBullets[k] = true
-			}
-		}
-
-		for b := range g.bullets {
-			for a := range g.asteroids {
-				if b.Collides(a) {
-					g.score += AsteroidDestroyPoints
-					toRemoveAsteroids[a] = true
-					toRemoveBullets[b] = true
-					g.generateExplosion(a.Position)
-					break
-				}
-			}
-		}
-
-		for k := range toRemoveBullets {
-			delete(g.bullets, k)
-			delete(g.lifetime, k)
-		}
-
-		for k := range toRemoveAsteroids {
-			delete(g.asteroids, k)
-		}
-
-		for k := range g.bullets {
-			k.Move(dt)
 		}
 		g.rocket.Move(dt)
 
