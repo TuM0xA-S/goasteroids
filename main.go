@@ -22,6 +22,7 @@ func init() {
 const (
 	EffectTrace = iota
 	EffectExplosion
+	EffectEnergyGained
 )
 
 //Game asteroids
@@ -30,6 +31,7 @@ type Game struct {
 	beginLast          time.Time
 	asteroids          map[*VectorObject]bool
 	bullets            map[*VectorObject]bool
+	energyBlocks       map[*VectorObject]bool
 	lifetime           map[*VectorObject]float64
 	asteroidSpawnTimer float64
 	cooldownTimer      float64
@@ -42,6 +44,26 @@ type Game struct {
 	idFor              map[*VectorObject]int
 	nextID             int
 	smashTimer         float64
+	energy             float64
+}
+
+func (g *Game) generateEnergyBlock(pos Vec2) {
+	angle := rand.Float64() * 2 * math.Pi
+	speed := Vec2{0, -1}
+	speed.Rotate(angle)
+	speed = speed.Mult(rand.Float64()*(EnergyBlockSpeedMax-EnergyBlockSpeedMin) + EnergyBlockSpeedMin)
+
+	block := &VectorObject{
+		Position: pos,
+		Speed:    speed,
+		Geometry: []Vec2{
+			{-1, -1}, {1, -1}, {1, 1}, {-1, 1},
+		},
+		Scale: 20,
+		Color: color.RGBA{0, 0, 255, 255},
+	}
+	g.lifetime[block] = EnergyBlockLifetime
+	g.energyBlocks[block] = true
 }
 
 func generateCircle(deviation float64, cnt int) (circle []Vec2) {
@@ -69,6 +91,18 @@ func (g *Game) generateRocketTrace() {
 	g.effects[t] = EffectTrace
 }
 
+func (g *Game) generateEnergyBlockCathed(pos Vec2) {
+	t := &VectorObject{
+		Geometry: generateCircle(0, EffectsDetalization),
+		Position: pos,
+		Color:    color.RGBA{0, 0, 255, 255},
+		Scale:    1,
+	}
+	g.lifetime[t] = EnergyGainedLifeTime
+	g.effects[t] = EffectEnergyGained
+
+}
+
 func (g *Game) generateExplosion(pos Vec2) {
 	t := &VectorObject{
 		Geometry: generateCircle(0, EffectsDetalization),
@@ -91,6 +125,9 @@ func (g *Game) processEffects(dt float64) {
 		} else if v == EffectExplosion {
 			gs = ExplosionGrowthSpeed
 			ds = ExplosionDisappearanceSpeed
+		} else if v == EffectEnergyGained {
+			gs = EnergyGainedGrowthSpeed
+			ds = EnergyGainedDisappearanceSpeed
 		}
 		k.Scale += dt * gs
 		clr := k.Color.(color.RGBA)
@@ -164,6 +201,8 @@ func (g *Game) startPlay() {
 	g.bullets = make(map[*VectorObject]bool)
 	g.lifetime = make(map[*VectorObject]float64)
 	g.effects = make(map[*VectorObject]int)
+	g.energyBlocks = make(map[*VectorObject]bool)
+
 	g.cooldownTimer = CooldownTime
 	g.asteroidSpawnTimer = AsteroidSpawnTime / 2
 	g.rocket = RocketObj
@@ -171,10 +210,14 @@ func (g *Game) startPlay() {
 	g.recordUpdated = false
 	g.nextID = 0
 	g.smashTimer = SmashTime
+	g.energy = 100
 }
 
 //Draw ....
 func (g *Game) Draw(dst *ebiten.Image) {
+	for k := range g.energyBlocks {
+		k.Draw(dst)
+	}
 	asteroids := []*VectorObject{}
 	for k := range g.asteroids {
 		asteroids = append(asteroids, k)
@@ -193,10 +236,14 @@ func (g *Game) Draw(dst *ebiten.Image) {
 	}
 
 	switch g.mode {
-	case ModePlay:
-		g.rocket.Draw(dst)
+	case ModePlay, ModeSmash:
+		if g.mode == ModePlay {
+			g.rocket.Draw(dst)
+		}
 		scoreText := fmt.Sprint("SCORE: ", int(g.score))
 		text.Draw(dst, scoreText, FontSmall, getCentredPosForText(scoreText, FontSmall), ScoreInGameY, ColorYellow)
+		energyText := fmt.Sprint("ENERGY: ", int(g.energy))
+		text.Draw(dst, energyText, FontSmall, getCentredPosForText(energyText, FontSmall), EnergyTextY, ColorYellow)
 	case ModeStart:
 		text.Draw(dst, TitleTextValue, FontBig, TitleTextX, TitleTextY, ColorGold)
 		text.Draw(dst, PressSpaceTextValue, FontSmall, PressSpaceTextX, PressSpaceTextY, ColorYellow)
@@ -211,10 +258,6 @@ func (g *Game) Draw(dst *ebiten.Image) {
 		if g.recordUpdated {
 			text.Draw(dst, NewRecordTextValue, FontMedium, NewRecordTextX, NewRecordTextY, ColorGreen)
 		}
-	case ModeSmash:
-		scoreText := fmt.Sprint("SCORE: ", int(g.score))
-		text.Draw(dst, scoreText, FontSmall, getCentredPosForText(scoreText, FontSmall), ScoreInGameY, ColorYellow)
-
 	}
 }
 
@@ -233,6 +276,7 @@ func getGame() *Game {
 		effects:            map[*VectorObject]int{},
 		idFor:              map[*VectorObject]int{},
 		bullets:            map[*VectorObject]bool{},
+		energyBlocks:       map[*VectorObject]bool{},
 	}
 }
 

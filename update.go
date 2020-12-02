@@ -1,12 +1,13 @@
 package main
 
 import (
-	. "github.com/TuM0xA-S/goasteroids/vobj"
+	"math/rand"
 	"time"
+
+	. "github.com/TuM0xA-S/goasteroids/vobj"
 
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/inpututil"
-
 )
 
 //Update ...
@@ -35,6 +36,7 @@ func (g *Game) Update() error {
 		delete(g.lifetime, k)
 		delete(g.bullets, k)
 		delete(g.effects, k)
+		delete(g.energyBlocks, k)
 	}
 
 	for k := range g.asteroids {
@@ -42,6 +44,9 @@ func (g *Game) Update() error {
 	}
 	g.processEffects(dt)
 	for k := range g.bullets {
+		k.Move(dt)
+	}
+	for k := range g.energyBlocks {
 		k.Move(dt)
 	}
 
@@ -54,6 +59,9 @@ func (g *Game) Update() error {
 				toRemoveAsteroids[a] = true
 				toRemoveBullets[b] = true
 				g.generateExplosion(a.Position)
+				if rand.Intn(EnergyBlockSpawnPerAsteroids) == 0 {
+					g.generateEnergyBlock(a.Position)
+				}
 				break
 			}
 		}
@@ -71,6 +79,13 @@ func (g *Game) Update() error {
 	switch g.mode {
 	case ModePlay:
 		g.score += dt
+		g.energy -= dt * EnergyConsumptionSpeed
+		if g.energy <= 0 {
+			g.mode = ModeSmash
+			g.generateExplosion(g.rocket.Position)
+			return nil
+		}
+
 		if g.cooldownTimer > 0 {
 			g.cooldownTimer -= dt
 		}
@@ -106,6 +121,19 @@ func (g *Game) Update() error {
 				g.generateExplosion(g.rocket.Position)
 				return nil
 			}
+		}
+
+		toRemoveBlocks := map[*VectorObject]bool{}
+		for block := range g.energyBlocks {
+			if g.rocket.Collides(block) {
+				g.energy += EnergyPerBlock
+				g.generateEnergyBlockCathed(g.rocket.Position)
+				toRemoveBlocks[block] = true
+			}
+		}
+		for k := range toRemoveBlocks {
+			delete(g.lifetime, k)
+			delete(g.energyBlocks, k)
 		}
 		g.rocket.Move(dt)
 

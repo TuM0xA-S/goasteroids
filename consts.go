@@ -58,6 +58,18 @@ const (
 	TraceDeltaY                 = 40
 	SafeRange                   = 300
 	SmashTime                   = 1.2
+	EnergyBlockSpeedMin         = 20
+	EnergyBlockSpeedMax         = 50
+	EnergyBlockLifetime         = 10
+	InitialEnergy               = 100
+	EnergyConsumptionSpeed      = 2
+	EnergyPerBlock              = 25
+	EnergyTextY = ScreenHeight - 20
+	EnergyGainedLifeTime = 0.3
+	EnergyGainedDisappearanceSpeed = 300
+	EnergyGainedGrowthSpeed        = 200
+	EnergyBlockSpawnPerAsteroids = 3
+
 )
 
 var RocketObj = VectorObject{
