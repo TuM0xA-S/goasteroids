@@ -173,7 +173,7 @@ func (g *Game) startPlay() {
 	g.cooldownTimer = CooldownTime / 2
 	g.asteroidSpawnTimer = AsteroidSpawnTime / 2
 	g.traceTimer = TraceCooldownTime / 2
-	
+
 	g.rocket = RocketObj
 	g.score = 0
 	g.recordUpdated = false
@@ -260,7 +260,7 @@ func getGame() *Game {
 
 func main() {
 	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
-	ebiten.SetWindowTitle("Asteroids beta v0.8")
+	ebiten.SetWindowTitle("Asteroids prerelease v0.9")
 	MaxX = ScreenWidth
 	MaxY = ScreenHeight
 	g := getGame()

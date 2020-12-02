@@ -40,7 +40,7 @@ const (
 	ControlsTextValue              = "CONTROLS: A, D - ROTATE; W - ACCELERATE; SPACEBAR - FIRE"
 	ControlsTextY                  = ScreenHeight - 20
 	RecordTextY                    = ScreenHeight/2 + 150
-	ScoreInGameY                   = 20
+	ScoreInGameY                   = 23
 	GameOverTextY                  = ScreenHeight/2 - 150
 	GameOverTextValue              = "GAME OVER"
 	ScoreGameOverY                 = GameOverTextY + 80
