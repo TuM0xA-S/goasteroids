@@ -4,9 +4,9 @@ import (
 	"image/color"
 	"math"
 
-	"github.com/hajimehoshi/ebiten/vector"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
-	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -16,8 +16,8 @@ const (
 
 //Consts
 var (
-	MaxX     float64
-	MaxY     float64
+	MaxX float64
+	MaxY float64
 )
 
 //Vec2 represents 2d vector

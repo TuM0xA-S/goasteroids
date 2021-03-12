@@ -9,10 +9,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/hajimehoshi/ebiten/text"
+	"github.com/hajimehoshi/ebiten/v2/text"
 
 	. "github.com/TuM0xA-S/goasteroids/vobj"
-	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 func init() {

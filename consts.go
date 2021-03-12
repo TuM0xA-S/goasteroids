@@ -5,7 +5,7 @@ import (
 	"math"
 
 	. "github.com/TuM0xA-S/goasteroids/vobj"
-	"github.com/hajimehoshi/ebiten/text"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 )
 
